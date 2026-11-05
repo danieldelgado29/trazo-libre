@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3f1eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./app.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="./icon-192.png">
+<link rel="stylesheet" href="./style.css">
+<script src="./app.js" defer></script>
+<title>Trazo Libre</title>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="mark" aria-hidden="true">∿</span><div><p>MI PIZARRA</p><h1>Trazo Libre</h1></div></div>
+  <button id="export" class="primary">Guardar PNG</button>
+</header>
+<main>
+  <div class="toolbar" aria-label="Herramientas de dibujo">
+    <div class="group"><button id="pen" aria-pressed="true">Lápiz</button><button id="eraser" aria-pressed="false">Borrador</button></div>
+    <div class="group colors" aria-label="Colores">
+      <button class="swatch" style="--color:#202326" data-color="#202326" aria-label="Negro" aria-pressed="true"></button>
+      <button class="swatch" style="--color:#315ccf" data-color="#315ccf" aria-label="Azul" aria-pressed="false"></button>
+      <button class="swatch" style="--color:#bd3d37" data-color="#bd3d37" aria-label="Rojo" aria-pressed="false"></button>
+      <button class="swatch" style="--color:#25785c" data-color="#25785c" aria-label="Verde" aria-pressed="false"></button>
+      <input id="color" type="color" value="#202326" aria-label="Color personalizado" title="Color personalizado">
+    </div>
+    <div class="group size"><label for="width">Grosor</label><input id="width" type="range" min="1" max="36" value="4"><output id="widthValue" for="width">4</output></div>
+    <div class="group actions"><button id="undo" title="Deshacer" aria-label="Deshacer" disabled>↶</button><button id="redo" title="Rehacer" aria-label="Rehacer" disabled>↷</button><button id="clear" disabled>Limpiar</button></div>
+  </div>
+  <div class="paper"><canvas id="canvas" aria-label="Lienzo de dibujo libre"></canvas></div>
+  <footer><span>DEDO · LÁPIZ · MOUSE</span><span id="status" role="status">Guardado en este dispositivo</span></footer>
+</main>
+</body>
+</html>
