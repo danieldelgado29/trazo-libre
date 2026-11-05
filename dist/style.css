@@ -30,3 +30,10 @@ footer{display:flex;justify-content:space-between;gap:10px;letter-spacing:.06em}
 @media(max-width:480px){.toolbar{column-gap:2px}.group{padding-inline:2px}.actions{margin-left:0}.colors{gap:2px}}
 .paper{background:#e8e5dc}
 canvas{inset:auto;left:50%;top:50%;transform:translate(-50%,-50%);background:white}
+
+.paper{touch-action:none}
+.paper.moving canvas{cursor:grab}
+.paper.moving:active canvas{cursor:grabbing}
+.view{gap:1px}
+.view button{padding-inline:6px}
+#zoomReset{min-width:64px;font-variant-numeric:tabular-nums}

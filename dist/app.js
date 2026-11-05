@@ -15,6 +15,15 @@ let strokes = page.strokes;
 const undo = [];
 const redo = [];
 let active = null;
+let fit = 1;
+let zoom = 1;
+let offsetX = 0;
+let offsetY = 0;
+let hand = false;
+let drag = null;
+let pinch = null;
+const touches = new Map();
+const maxZoom = 6;
 let tool = 'pen';
 let color = get('color').value;
 
@@ -43,16 +52,69 @@ function render() {
 }
 
 function resize() {
-  const scale = Math.min(paper.clientWidth / page.width, paper.clientHeight / page.height);
+  fit = Math.min(paper.clientWidth / page.width, paper.clientHeight / page.height);
   const ratio = Math.min(devicePixelRatio || 1, 3);
-  canvas.style.width = page.width * scale + 'px';
-  canvas.style.height = page.height * scale + 'px';
-  canvas.width = Math.max(1, Math.round(page.width * scale * ratio));
-  canvas.height = Math.max(1, Math.round(page.height * scale * ratio));
+  canvas.style.width = page.width * fit + 'px';
+  canvas.style.height = page.height * fit + 'px';
+  canvas.width = Math.max(1, Math.round(page.width * fit * ratio));
+  canvas.height = Math.max(1, Math.round(page.height * fit * ratio));
   context.setTransform(canvas.width / page.width, 0, 0, canvas.height / page.height, 0, 0);
   context.lineJoin = context.lineCap = 'round';
+  applyView();
   render();
 }
+
+function applyView() {
+  const limitX = Math.max(0, (page.width * fit * zoom - paper.clientWidth) / 2);
+  const limitY = Math.max(0, (page.height * fit * zoom - paper.clientHeight) / 2);
+  offsetX = Math.max(-limitX, Math.min(limitX, offsetX));
+  offsetY = Math.max(-limitY, Math.min(limitY, offsetY));
+  canvas.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(${zoom})`;
+  get('zoomReset').textContent = Math.round(zoom * 100) + ' %';
+  get('zoomIn').disabled = zoom >= maxZoom;
+  get('zoomOut').disabled = zoom <= 1;
+}
+
+function center() {
+  const rect = paper.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function setZoom(next, from = center(), to = from) {
+  const origin = center();
+  const target = Math.max(1, Math.min(maxZoom, next));
+  const factor = target / zoom;
+  offsetX = to.x - origin.x - (from.x - origin.x - offsetX) * factor;
+  offsetY = to.y - origin.y - (from.y - origin.y - offsetY) * factor;
+  zoom = target;
+  applyView();
+}
+
+function touchGeometry() {
+  const [a, b] = touches.values();
+  return {
+    x: (a.clientX + b.clientX) / 2,
+    y: (a.clientY + b.clientY) / 2,
+    distance: Math.max(1, Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)),
+  };
+}
+
+get('zoomIn').onclick = () => setZoom(zoom * 1.25);
+get('zoomOut').onclick = () => setZoom(zoom / 1.25);
+get('zoomReset').onclick = () => setZoom(1);
+
+function setHand(enabled) {
+  hand = enabled;
+  get('pan').setAttribute('aria-pressed', String(hand));
+  paper.classList.toggle('moving', hand);
+}
+
+get('pan').onclick = () => setHand(!hand);
+paper.addEventListener('wheel', event => {
+  if (!event.ctrlKey && !event.metaKey) return;
+  event.preventDefault();
+  setZoom(zoom * Math.exp(-event.deltaY * 0.012), { x: event.clientX, y: event.clientY });
+}, { passive: false });
 
 function updateButtons() {
   get('undo').disabled = undo.length === 0;
@@ -86,9 +148,27 @@ function point(event) {
   };
 }
 
-canvas.addEventListener('pointerdown', event => {
-  if (active || event.button !== 0) return;
-  canvas.setPointerCapture(event.pointerId);
+paper.addEventListener('pointerdown', event => {
+  if (event.button !== 0) return;
+  if (event.pointerType === 'touch') {
+    touches.set(event.pointerId, event);
+    paper.setPointerCapture(event.pointerId);
+    if (touches.size >= 2) {
+      if (touches.size === 2) {
+        active = null;
+        drag = null;
+        pinch = touchGeometry();
+        render();
+      }
+      return;
+    }
+  }
+  if (active || drag || event.target !== canvas) return;
+  paper.setPointerCapture(event.pointerId);
+  if (hand) {
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    return;
+  }
   const start = point(event);
   const width = Number(get('width').value);
   const stroke = { tool, color, width, points: [start] };
@@ -105,13 +185,34 @@ function append(event) {
   segment(stroke, previous, next);
 }
 
-canvas.addEventListener('pointermove', event => {
+paper.addEventListener('pointermove', event => {
+  if (touches.has(event.pointerId)) {
+    touches.set(event.pointerId, event);
+    if (pinch && touches.size >= 2) {
+      const next = touchGeometry();
+      setZoom(zoom * next.distance / pinch.distance, pinch, next);
+      pinch = next;
+      return;
+    }
+  }
+  if (drag?.id === event.pointerId) {
+    offsetX += event.clientX - drag.x;
+    offsetY += event.clientY - drag.y;
+    drag.x = event.clientX;
+    drag.y = event.clientY;
+    applyView();
+    return;
+  }
   if (active?.id !== event.pointerId) return;
   const samples = event.getCoalescedEvents?.();
   for (const sample of samples?.length ? samples : [event]) append(sample);
 });
 
 function finish(event) {
+  if (touches.delete(event.pointerId) && pinch) {
+    pinch = touches.size >= 2 ? touchGeometry() : null;
+  }
+  if (drag?.id === event.pointerId) drag = null;
   if (active?.id !== event.pointerId) return;
   if (event.type === 'pointerup') append(event);
   const { stroke } = active;
@@ -120,11 +221,12 @@ function finish(event) {
 }
 
 for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-  canvas.addEventListener(name, finish);
+  paper.addEventListener(name, finish);
 }
 
 function selectTool(next) {
   tool = next;
+  setHand(false);
   for (const name of ['pen', 'eraser']) get(name).setAttribute('aria-pressed', String(name === tool));
 }
 

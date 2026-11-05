@@ -28,6 +28,12 @@
       <input id="color" type="color" value="#202326" aria-label="Color personalizado" title="Color personalizado">
     </div>
     <div class="group size"><label for="width">Grosor</label><input id="width" type="range" min="1" max="36" value="4"><output id="widthValue" for="width">4</output></div>
+    <div class="group view" aria-label="Zoom y desplazamiento">
+      <button id="zoomOut" aria-label="Alejar" title="Alejar">−</button>
+      <button id="zoomReset" aria-label="Ajustar hoja a la pantalla" title="Ajustar hoja">100 %</button>
+      <button id="zoomIn" aria-label="Acercar" title="Acercar">+</button>
+      <button id="pan" aria-pressed="false" title="Arrastra para mover la hoja">Mover</button>
+    </div>
     <div class="group actions"><button id="undo" title="Deshacer" aria-label="Deshacer" disabled>↶</button><button id="redo" title="Rehacer" aria-label="Rehacer" disabled>↷</button><button id="clear" disabled>Limpiar</button></div>
   </div>
   <div class="paper"><canvas id="canvas" aria-label="Lienzo de dibujo libre"></canvas></div>

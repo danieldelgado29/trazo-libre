@@ -1,4 +1,4 @@
-const cacheName = 'trazo-libre-v1';
+const cacheName = 'trazo-libre-v2';
 const assets = ['./', './index.html', './app.js', './style.css', './app.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(cacheName).then(cache => cache.addAll(assets)).then(() => self.skipWaiting()));
